@@ -1,0 +1,77 @@
+clc;
+clear all;
+Img = rgbimread('machine.png');               % Read image
+[M , N] = size(Img);                    % Get size of image
+Mask = [-1 0 1;-2 0 2;-1 0 1];          % Mask
+%Mask = [1 0;0 -1];
+[w, h] = size(Mask);                    % Get size of mask
+
+M = size(Img, 1) + size(Mask, 1);       % Add size of matrix and image
+N = size(Img, 2) + size(Mask, 2);
+
+% Fast Fourier transfomrm method
+% Transform image and mask from spatial domain to frequency domain
+ImgFFT = fft2(double(Img), M, N);
+MaskFFT = fft2(double(Mask), M, N);
+
+ConvFFT = (ImgFFT.*MaskFFT);            % Convolution of image and mask
+
+ResImg1 = ifft2(ConvFFT);               % Result of FFT method
+% Adjust dimensions
+ResImg1 = ResImg1(floor(w/2)+1:end-floor(w/2), floor(h/2)+1:end-floor(h/2));
+
+% Transform result of first method to frequency domain
+ResImg1FFT = fft2(ResImg1);
+
+imshow(log(abs(fftshift(ResImg1FFT)) + 1), [])
+%imshow(uint8(ResImg1));
+
+% Regular convolution method
+% Result of regular convolution
+ResImg2 = conv2(double(Img), double(Mask), 'same');
+
+% Transform result of second method to frequency domain
+ResImg2FFT = fft2(ResImg2);
+
+%imshow(log(abs(fftshift(ResImg2FFT)) + 1), [])
+
+% Plot results
+% Original image
+subplot(2,4,1);
+title('Original');
+imshow(Img);
+
+% Mask in spatial domain
+subplot(2,4,2);
+title('Mask');
+imshow(Mask);
+
+% Result of regular convolution
+subplot(2,4,3);
+title('Regular Convolution');
+imshow(uint8(ResImg2));
+
+% Result of regular convolution in frequency domain
+subplot(2,4,4);
+title('Regular Convolution (Frequency domain)');
+imshow(log(abs(fftshift(ResImg2FFT)) + 1), [])
+
+% Original image in frequency domain
+subplot(2,4,5);
+title('Original (Frequency domain)');
+imshow(log(abs(fftshift(ImgFFT)) + 1), [])
+
+% Mask in spatial domain
+subplot(2,4,6);
+title('Mask (Frequency domain)');
+imshow(log(abs(fftshift(MaskFFT)) + 1), [])
+
+% Result of FFT method in frequency domain
+subplot(2,4,7);
+title('Result with Fast Fourier transform\n(Frequency domain)');
+imshow(log(abs(fftshift(ResImg1FFT)) + 1), [])
+
+% Result of FFT method in spatial domain
+subplot(2,4,8);
+title('Result with Fast Fourier transform');
+imshow(uint8(ResImg1));
