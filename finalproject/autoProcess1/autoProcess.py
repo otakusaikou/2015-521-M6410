@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import numpy as np
+import datetime
 from SIFTMatching import match
 from LSMatching import lsMatchProc
 from pixel2fiducial import pixel2fiducialProc
@@ -32,6 +33,8 @@ def main():
         LSMatching.py: Use LSM as a filter to get more accurate result
         pixel2fiducial.py: Transform image coordinates to fiducial frame"""
 
+    tStart = datetime.datetime.now()
+
     images = ["01.jpg", "02.jpg", "03.jpg", "04.jpg", "05.jpg"]
     threshold = [0.4, 0.4, 0.5, 0.5]
     IO = "IO.txt"
@@ -59,6 +62,9 @@ def main():
         LSMOutputFileName = "LSMatching%d%d.txt" % (i + 1, i + 2)
         imageCoordFileName = "fiducial%d%d.txt" % (i + 1, i + 2)
         pixel2fiducialProc(IO, LSMOutputFileName, imageCoordFileName)
+
+    tEnd = datetime.datetime.now()
+    print "Works done! It took %f sec" % (tEnd - tStart).total_seconds()
 
     return 0
 
