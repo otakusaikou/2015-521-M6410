@@ -50,7 +50,7 @@ def getEqns(x0, y0, f, XL, YL, ZL, omega, phi, kappa, x, y, XA, YA, ZA):
     return Matrix(np.array(zip(Fx, Fy)).flatten())
 
 
-def main(inputFileName, outputFileName):
+def main(inputFileName, IOFileName, outputFileName):
     # Read image coordinates from file
     fin = open(inputFileName)
     lines = fin.readlines()
@@ -59,8 +59,12 @@ def main(inputFileName, outputFileName):
     data = np.array(map(lambda l: map(float, l.split()), lines))
     Lx, Ly, Rx, Ry = np.hsplit(data, 4)
 
-    # Define interior orientation parameters
-    f = 31.742654
+    # Read interior orientation information from file
+    fin = open(IOFileName)
+    data = map(lambda x: float(x), fin.readline().split())
+    fin.close()
+
+    f = data[0]
 
     # Define initial values
     XL0 = YL0 = OmegaL0 = PhiL0 = KappaL0 = 0
@@ -227,5 +231,5 @@ def main(inputFileName, outputFileName):
 
 
 if __name__ == '__main__':
-    inputFileName, outputFileName = tuple(sys.argv[1:])
-    main(inputFileName, outputFileName)
+    inputFileName, IOFileName, outputFileName = tuple(sys.argv[1:])
+    main(inputFileName, IOFileName, outputFileName)
