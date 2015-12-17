@@ -40,7 +40,6 @@ def pixel2fiducialProc(IOFileName, inputFileName, outputFileName):
 
     # Output results
     fout = open(outputFileName, "w")
-    fout.write("Lx Ly Rx Ry\n")
     for i in range(len(Lxc)):
         fout.write("%.6f %.6f %.6f %.6f\n" % (Lxc[i], Lyc[i], Rxc[i], Ryc[i]))
 
