@@ -6,27 +6,32 @@ from mpl_toolkits.mplot3d import Axes3D
 
 
 def main():
-    # Read exposure coordinates
-    lines = open("model23.out").readlines()
-    EO = np.array(map(lambda l: l.split(), lines[:2])).astype(np.double)
-    X, Y, Z = np.hsplit(EO, 3)
+    expNum = 5   # Define number of exposure station
 
-    # Read object point coordinates
-    Pts = np.array(map(lambda l: l.split(), lines[2:])).astype(np.double)
-    XA, YA, ZA = np.hsplit(Pts, 3)
+    # Read exposure coordinates from file
+    fin = open("result.txt")
+    lines = fin.readlines()
+    fin.close()
+
+    data = np.array(map(lambda l: l.split(), lines)).astype(np.double)
+    X, Y, Z = np.hsplit(data, 3)
 
     # Create 3D figure
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+    ax = fig.add_subplot(111, projection="3d")
 
-    # Name x y label and set equal axis
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.axis("equal")
+    # Name x, y and z label and set equal axis
+    ax.pbaspect = [1.0, 1.0, 1.0]
+    ax.set_xlabel("X axis")
+    ax.set_ylabel("Y axis")
+    ax.set_zlabel("Z axis")
 
     # Plot 3D points
-    ax.scatter(XA, YA, ZA, c="r")
-    ax.scatter(X, Y, Z, c="b")
+    # Exposure station
+    ax.scatter(X[:expNum], Y[:expNum], Z[:expNum], c="b", marker="x")
+
+    # Object point
+    ax.scatter(X[expNum:], Y[expNum:], Z[expNum:], c="r", marker="o")
 
     plt.show()
 
