@@ -8,8 +8,8 @@ import cv2
 def showImgPair(fileName1, fileName2, pointFileName):
     """Display matching result of two images"""
     # Read image
-    leftImg = cv2.imread(fileName1)
-    rightImg = cv2.imread(fileName2)
+    leftImg = cv2.cvtColor(cv2.imread(fileName1), cv2.COLOR_BGR2RGB)
+    rightImg = cv2.cvtColor(cv2.imread(fileName2), cv2.COLOR_BGR2RGB)
 
     # Read conjugate points
     fin = open(pointFileName)

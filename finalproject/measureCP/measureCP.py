@@ -14,9 +14,9 @@ def measureProc(image1, image2, image3, outputFileName):
     fout = open(outputFileName, "w")
 
     # Read image
-    leftImg = cv2.imread(image1)
-    middleImg = cv2.imread(image2)
-    rightImg = cv2.imread(image3)
+    leftImg = cv2.cvtColor(cv2.imread(image1), cv2.COLOR_BGR2RGB)
+    middleImg = cv2.cvtColor(cv2.imread(image2), cv2.COLOR_BGR2RGB)
+    rightImg = cv2.cvtColor(cv2.imread(image3), cv2.COLOR_BGR2RGB)
 
     # Create figure
     fig = plt.figure("Point Measuring Process")
