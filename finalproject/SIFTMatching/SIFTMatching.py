@@ -53,12 +53,14 @@ def match(fileName1, fileName2, threshold, show=False):
 
         # Left image
         ax1 = fig.add_subplot(121)
-        ax1.imshow(leftImg, interpolation="none")
+        ax1.imshow(
+            cv2.cvtColor(leftImg, cv2.COLOR_BGR2RGB), interpolation="none")
         ax1.plot(Lcol, Lrow, "bo")
 
         # Right image
         ax2 = fig.add_subplot(122)
-        ax2.imshow(rightImg, interpolation="none")
+        ax2.imshow(
+            cv2.cvtColor(rightImg, cv2.COLOR_BGR2RGB), interpolation="none")
         ax2.plot(Rcol, Rrow, "bo")
 
         plt.show()
