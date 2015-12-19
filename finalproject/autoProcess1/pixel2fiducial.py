@@ -26,7 +26,7 @@ def pixel2fiducialProc(IOFileName, inputFileName, outputFileName):
 
     # Read image point coordinates from file
     fin = open(inputFileName)
-    data = np.array(map(lambda x: x.split(), fin.readlines()[1:]))
+    data = np.array(map(lambda x: x.split(), fin.readlines()))
     fin.close()
     Lcol, Lrow, Rcol, Rrow = np.hsplit(np.double(data), 4)
 
