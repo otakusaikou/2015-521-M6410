@@ -36,7 +36,7 @@ def main():
     tStart = datetime.datetime.now()
 
     images = ["01.jpg", "02.jpg", "03.jpg", "04.jpg", "05.jpg"]
-    threshold = [0.4, 0.4, 0.5, 0.5]
+    threshold = [0.45, 0.36, 0.45, 0.5]
     IO = "IO.txt"
     commonCp = ["ControlPt123.txt", "ControlPt234.txt", "ControlPt345.txt"]
 
