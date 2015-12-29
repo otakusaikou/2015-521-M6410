@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 import cv2
 import numpy as np
-import pdb
 
 
 np.set_printoptions(suppress=True)  # Disable scientific notation for numpy
@@ -56,7 +55,8 @@ def linearReg(
     # Compute elements of covariance matrix
     Sx2 = (leftArr**2).sum() - leftArr.sum()**2 / len(leftArr)
     # Sy2 = (rightArr**2).sum() - rightArr.sum()**2 / len(rightArr)
-    Sxy = (leftArr*rightArr).sum() - (leftArr.sum()*rightArr.sum()/len(leftArr))
+    Sxy = (leftArr*rightArr).sum() \
+        - (leftArr.sum()*rightArr.sum()/len(leftArr))
 
     beta = 1.0 * Sxy / Sx2      # The slope of regression line
 
@@ -88,21 +88,28 @@ def lsMatching(leftPt, rightPt, windowSize, leftImg, rightImg):
                        a0, a1, a2, b0, b1, b2)
 
     X = np.ones(1)      # Initial value for iteration
+
+    # Initial values for the second termination criteria
+    delta = 1
+    X0 = np.zeros(1)    # Variable for old unknown parameters
     lc = 1              # Loop counter
-    while abs(X.sum()) > 10**-8:
+    while max(X) > 0.01 and delta > 0.05 and lc < 40:
         # Create lists for elements of coefficient matrix
         fa0, fa1, fa2, fb0, fb1, fb2, fh1, f0 = ([] for i in range(8))
         fh0 = np.ones(windowSize**2)    # Coefficients of dh0 are constants
 
         # Compute elemens of coefficient matrix and f matrix
         for yl in range((leftPt[0]-windowSize/2), (1+leftPt[0]+windowSize/2)):
-            for xl in range((leftPt[1]-windowSize/2), (1+leftPt[1]+windowSize/2)):
+            for xl in range(
+                    (leftPt[1]-windowSize/2), (1+leftPt[1]+windowSize/2)):
                 xr = a0 + a1 * xl + a2 * yl     # Get corresponding right image
                 yr = b0 + b1 * xl + b2 * yl     # coordinates
 
                 # Compute slope of B in both x and y directions
-                Bx = (getRVal(rightGray, xr + 1, yr)-getRVal(rightGray, xr - 1, yr)) / 2.0
-                By = (getRVal(rightGray, xr, yr + 1)-getRVal(rightGray, xr, yr - 1)) / 2.0
+                Bx = (getRVal(rightGray, xr + 1, yr)
+                      - getRVal(rightGray, xr - 1, yr)) / 2.0
+                By = (getRVal(rightGray, xr, yr + 1)
+                      - getRVal(rightGray, xr, yr - 1)) / 2.0
 
                 fa0.append(h1 * Bx)
                 fa1.append(xl * h1 * Bx)
@@ -111,7 +118,8 @@ def lsMatching(leftPt, rightPt, windowSize, leftImg, rightImg):
                 fb1.append(xl * h1 * By)
                 fb2.append(yl * h1 * By)
                 fh1.append(getRVal(rightGray, xr, yr))
-                f0.append(h0 + h1 * getRVal(rightGray, xr, yr) - leftGray[yl, xl])
+                f0.append(
+                    h0 + h1 * getRVal(rightGray, xr, yr) - leftGray[yl, xl])
 
         # Compute unknown parameters
         B = np.matrix(zip(fa0, fa1, fa2, fb0, fb1, fb2, fh0, fh1))
@@ -131,7 +139,11 @@ def lsMatching(leftPt, rightPt, windowSize, leftImg, rightImg):
         h0 += X[6, 0]
         h1 += X[7, 0]
 
-        if abs(X).sum() > 200 or lc >= 50:
+        # Compute the difference between the new and old unknown parameters
+        delta = abs(max(X) - max(X0))
+        X0 = X      # Update the old unknown parameters
+
+        if abs(X).sum() > 200:
             print "Failed!"
             return None
 #        pdb.set_trace()
@@ -178,14 +190,16 @@ def main():
 
     fout = open("result.txt", "w")
     for i in range(len(Lx)):
-        result = lsMatching([Ly[i], Lx[i]], [Ry[i], Rx[i]], windowSize, leftImg, rightImg)
+        result = lsMatching(
+            [Ly[i], Lx[i]], [Ry[i], Rx[i]], windowSize, leftImg, rightImg)
 
         if result:
             Lx2.append(result[0])
             Ly2.append(result[1])
             Rx2.append(result[2])
             Ry2.append(result[3])
-            fout.write("%d %d %.6f %.6f\n" % (result[0], result[1], result[2], result[3]))
+            fout.write("%d %d %.6f %.6f\n"
+                       % (result[0], result[1], result[2], result[3]))
     fout.close()
 
     return 0
