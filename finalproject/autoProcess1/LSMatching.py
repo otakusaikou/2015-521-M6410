@@ -17,7 +17,7 @@ def lsMatchProc(leftName, rightName, inputFileName, outputFileName):
     Lx, Ly, Rx, Ry = map(lambda x: x.flatten(), np.hsplit(data, 4))
 
     # Define size of subarray
-    windowSize = 15
+    windowSize = 23
 
     # Read images
     leftImg = cv2.imread(leftName)
@@ -146,7 +146,7 @@ def lsMatching(leftPt, rightPt, windowSize, leftImg, rightImg):
     X0 = np.zeros(1)    # Variable for old unknown parameters
     lc = 1              # Loop counter
 
-    while max(X) > 0.01 and delta > 0.05 and lc < 40:
+    while max(abs(X)) > 0.01 and delta > 0.05 and lc < 40:
         # Create lists for elements of coefficient matrix
         fa0, fa1, fa2, fb0, fb1, fb2, fh1, f0 = ([] for i in range(8))
         fh0 = np.ones(windowSize**2)    # Coefficients of dh0 are constants
@@ -193,7 +193,7 @@ def lsMatching(leftPt, rightPt, windowSize, leftImg, rightImg):
         h1 += X[7, 0]
 
         # Compute the difference between the new and old unknown parameters
-        delta = abs(max(X) - max(X0))
+        delta = abs(max(abs(X)) - max(abs(X0)))
         X0 = X      # Update the old unknown parameters
 
         if abs(X).sum() > 200:
