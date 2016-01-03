@@ -7,8 +7,17 @@ import numpy as np
 np.set_printoptions(suppress=True)  # Disable scientific notation for numpy
 
 
-def getRVal(img, x, y):
-    """ Resample from right image, using bilinear interpolation"""
+def getVal(img, x, y):
+    """Return gray value from image without exceeding image extent"""
+    # Ensure the coordinates of given point is in the image extent
+    x = np.clip(x, 0, img.shape[1] - 1)
+    y = np.clip(y, 0, img.shape[0] - 1)
+
+    return img[y, x]
+
+
+def getInterpolation(img, x, y):
+    """Resample from right image, using bilinear interpolation"""
     # Get coordinates of nearest four points
     x0 = np.floor(x).astype(int)
     x1 = x0 + 1
@@ -46,8 +55,8 @@ def linearReg(
         for xl in range((leftPt[1]-windowSize/2), (1+leftPt[1]+windowSize/2)):
             xr = a0 + a1 * xl + a2 * yl     # Get corresponding right image
             yr = b0 + b1 * xl + b2 * yl     # coordinates
-            leftArr.append(leftImg[yl, xl])
-            rightArr.append(rightImg[yr, xr])
+            leftArr.append(getVal(leftImg, xl, yl))
+            rightArr.append(getVal(rightImg, xr, yr))
 
     leftArr = np.array(leftArr)
     rightArr = np.array(rightArr)
@@ -106,10 +115,10 @@ def lsMatching(leftPt, rightPt, windowSize, leftImg, rightImg):
                 yr = b0 + b1 * xl + b2 * yl     # coordinates
 
                 # Compute slope of B in both x and y directions
-                Bx = (getRVal(rightGray, xr + 1, yr)
-                      - getRVal(rightGray, xr - 1, yr)) / 2.0
-                By = (getRVal(rightGray, xr, yr + 1)
-                      - getRVal(rightGray, xr, yr - 1)) / 2.0
+                Bx = (getInterpolation(rightGray, xr + 1, yr)
+                      - getInterpolation(rightGray, xr - 1, yr)) / 2.0
+                By = (getInterpolation(rightGray, xr, yr + 1)
+                      - getInterpolation(rightGray, xr, yr - 1)) / 2.0
 
                 fa0.append(h1 * Bx)
                 fa1.append(xl * h1 * Bx)
@@ -117,9 +126,9 @@ def lsMatching(leftPt, rightPt, windowSize, leftImg, rightImg):
                 fb0.append(h1 * By)
                 fb1.append(xl * h1 * By)
                 fb2.append(yl * h1 * By)
-                fh1.append(getRVal(rightGray, xr, yr))
+                fh1.append(getInterpolation(rightGray, xr, yr))
                 f0.append(
-                    h0 + h1 * getRVal(rightGray, xr, yr) - leftGray[yl, xl])
+                    h0 + h1 * getInterpolation(rightGray, xr, yr) - getVal(leftGray, xl, yl))
 
         # Compute unknown parameters
         B = np.matrix(zip(fa0, fa1, fa2, fb0, fb1, fb2, fh0, fh1))
@@ -178,7 +187,7 @@ def main():
     Lx, Ly, Rx, Ry = map(lambda x: x.flatten(), np.hsplit(data, 4))
 
     # Define size of subarray
-    windowSize = 15
+    windowSize = 23
 
     # Read images
     leftImg = cv2.imread("01.jpg")
