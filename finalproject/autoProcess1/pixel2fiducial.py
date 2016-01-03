@@ -74,7 +74,7 @@ def img2frame(col, row, IO):
 
 
 def main():
-    lsMatchProc("IO.txt", "LSMatching12.txt", "fiducial12.txt")
+    pixel2fiducialProc("IO.txt", "LSMatching12.txt", "fiducial12.txt")
 
     return 0
 
