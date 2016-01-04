@@ -6,7 +6,8 @@ import numpy as np
 import sys
 
 
-LANG = sys.stdout.encoding          # Get system language code
+# LANG = sys.stdout.encoding          # Get system language code
+LANG = "utf-8"
 np.set_printoptions(suppress=True)  # Disable scientific notation for numpy
 
 
@@ -116,11 +117,11 @@ def main(inputFileName, IOFileName, outputFileName):
         np.array([OmegaRs, PhiRs, KappaRs, YRs, ZRs]),
         np.array(zip(XAs, YAs, ZAs)).flatten())
 
-    # Compute cofficient matrix
+    # Compute coefficient matrix
     JF1 = F1.jacobian(l)
     JF2 = F2.jacobian(l)
 
-    # Create function objects for two parts of cofficient matrix and f matrix
+    # Create function objects for two parts of coefficient matrix and f matrix
     B1 = lambdify(tuple(var1), JF1, modules='sympy')
     B2 = lambdify(tuple(var2), JF2, modules='sympy')
     F01 = lambdify(tuple(var1), -F1, modules='sympy')
@@ -159,7 +160,8 @@ def main(inputFileName, IOFileName, outputFileName):
         Z0 += np.array(X[7::3, 0])
 
         # Output messages for iteration process
-        print "Iteration count: %d" % lc, u"|ΔX| = %.6f" % abs(X.sum())
+        print "Iteration count: %d" % lc, u"|ΔX| = %.6f".encode(LANG) \
+            % abs(X.sum())
         lc += 1         # Update Loop counter
 
     # Compute residual vector
