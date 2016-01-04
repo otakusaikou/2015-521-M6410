@@ -10,8 +10,8 @@ import sys
 import os
 
 
-LANG = sys.stdout.encoding          # Get system language code
-LANG = "shift-jis"
+# LANG = sys.stdout.encoding          # Get system language code
+LANG = "utf-8"
 np.set_printoptions(suppress=True)  # Disable scientific notation for numpy
 
 
@@ -177,7 +177,8 @@ def trans3D(xp, yp, zp, controlPtFile):
         L0 = L + V
 
         # Output messages for iteration process
-        print "Iteration count: %d" % lc, u"|ΔX| = %.6f" % abs(dX.sum())
+        print "Iteration count: %d" % lc, u"|ΔX| = %.6f".encode(LANG) \
+            % abs(dX.sum())
         lc += 1         # Update Loop counter
 
     # Compute residual vector
