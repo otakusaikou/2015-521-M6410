@@ -90,7 +90,7 @@ def show3D(IOFileName, EOFilename, ptFilename, showEO=True, showPt=True):
     # Name x, y and z label
     ax.set_xlabel("x axis")
     ax.set_ylabel("y axis")
-    ax.set_zlabel("Z axis")
+    ax.set_zlabel("z axis")
 
     # Determine the bounds
     min_ = max_ = 0     # For overoll
@@ -109,8 +109,8 @@ def show3D(IOFileName, EOFilename, ptFilename, showEO=True, showPt=True):
         scale = .2      # Scale for photo extent
 
         # Coordinates of corner (Repeat first point for drawing rectangle)
-        xp = np.array([x0, x1, x1, x0, x0]) * .2
-        yp = np.array([y0, y0, y1, y1, y0]) * .2
+        xp = np.array([x0, x1, x1, x0, x0]) * scale
+        yp = np.array([y0, y0, y1, y1, y0]) * scale
         zp = -np.ones(5) * IO["f"] * scale
         for i in range(len(Tx)):
             M = getM(Omega[i], Phi[i], Kappa[i])
