@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from sympy import symbols, sin, cos, Matrix, lambdify
+from sympy import symbols, sin, cos, Matrix, lambdify, matrix2numpy
 from math import degrees as deg
 import numpy as np
 import sys
@@ -12,7 +12,7 @@ np.set_printoptions(suppress=True)  # Disable scientific notation for numpy
 
 
 def getM(omega, phi, kappa):    # Compute rotation matrix M
-    M = np.matrix([
+    M = Matrix([
         [
             cos(phi)*cos(kappa),
             sin(omega)*sin(phi)*cos(kappa) + cos(omega)*sin(kappa),
@@ -48,7 +48,7 @@ def getEqns(x0, y0, f, XL, YL, ZL, omega, phi, kappa, x, y, XA, YA, ZA):
     Fx = f * (r / q) + x - x0
     Fy = f * (s / q) + y - y0
 
-    return Matrix(np.array(zip(Fx, Fy)).flatten())
+    return Matrix([Fx, Fy])
 
 
 def main(inputFileName, IOFileName, outputFileName):
@@ -58,7 +58,7 @@ def main(inputFileName, IOFileName, outputFileName):
     fin.close()
 
     data = np.array(map(lambda l: map(float, l.split()), lines))
-    Lx, Ly, Rx, Ry = np.hsplit(data, 4)
+    Lx, Ly, Rx, Ry = map(lambda a: a.flatten(), np.hsplit(data, 4))
 
     # Read interior orientation information from file
     fin = open(IOFileName)
@@ -89,13 +89,8 @@ def main(inputFileName, IOFileName, outputFileName):
     XRs, YRs, ZRs, OmegaRs, PhiRs, KappaRs = symbols(
         u"XR YR ZR ωR, φR, κR".encode(LANG))
 
-    xls = np.array(symbols("xl1:%d" % (len(Lx) + 1)))
-    yls = np.array(symbols("yl1:%d" % (len(Lx) + 1)))
-    xrs = np.array(symbols("xr1:%d" % (len(Lx) + 1)))
-    yrs = np.array(symbols("yr1:%d" % (len(Lx) + 1)))
-    XAs = np.array(symbols("XA1:%d" % (len(Lx) + 1)))
-    YAs = np.array(symbols("YA1:%d" % (len(Lx) + 1)))
-    ZAs = np.array(symbols("ZA1:%d" % (len(Lx) + 1)))
+    xls, yls, xrs, yrs = symbols("xl yl xr yr")
+    XAs, YAs, ZAs = symbols("XA YA ZA")
 
     # List observation equations
     F1 = getEqns(
@@ -107,15 +102,13 @@ def main(inputFileName, IOFileName, outputFileName):
         xrs, yrs, XAs, YAs, ZAs)
 
     # Create lists for substitution of initial values and constants
-    var1 = [x0s, y0s, fs, XLs, YLs, ZLs, OmegaLs, PhiLs, KappaLs] + \
-        list(np.array(zip(xls, yls, XAs, YAs, ZAs)).flatten())
-    var2 = [x0s, y0s, fs, XRs, YRs, ZRs, OmegaRs, PhiRs, KappaRs] + \
-        list(np.array(zip(xrs, yrs, XAs, YAs, ZAs)).flatten())
+    var1 = np.array([x0s, y0s, fs, XLs, YLs, ZLs, OmegaLs, PhiLs, KappaLs,
+                     xls, yls, XAs, YAs, ZAs])
+    var2 = np.array([x0s, y0s, fs, XRs, YRs, ZRs, OmegaRs, PhiRs, KappaRs,
+                     xrs, yrs, XAs, YAs, ZAs])
 
     # Define a symbol array for unknown parameters
-    l = np.append(
-        np.array([OmegaRs, PhiRs, KappaRs, YRs, ZRs]),
-        np.array(zip(XAs, YAs, ZAs)).flatten())
+    l = np.array([OmegaRs, PhiRs, KappaRs, YRs, ZRs, XAs, YAs, ZAs])
 
     # Compute coefficient matrix
     JF1 = F1.jacobian(l)
@@ -130,19 +123,30 @@ def main(inputFileName, IOFileName, outputFileName):
     X = np.ones(1)      # Initial value for iteration
     lc = 1              # Loop counter
     while abs(X.sum()) > 10**-10:
-        # Create lists of initial values and constants
-        val1 = [0, 0, f, XL0, YL0, ZL0, OmegaL0, PhiL0, KappaL0] + \
-            list(np.array(zip(Lx, Ly, X0, Y0, Z0)).flatten())
-        val2 = [0, 0, f, XR0, YR0, ZR0, OmegaR0, PhiR0, KappaR0] + \
-            list(np.array(zip(Rx, Ry, X0, Y0, Z0)).flatten())
+        B = np.matrix(np.zeros((4 * len(Lx), 5 + 3 * len(Lx))))
+        F0 = np.matrix(np.zeros((4 * len(Lx), 1)))
+        # Column index which is used to update values of B and f matrix
+        j = 0
+        for i in range(len(Lx)):
+            # Create lists of initial values and constants
+            val1 = np.array([0, 0, f, XL0, YL0, ZL0, OmegaL0, PhiL0, KappaL0,
+                             Lx[i], Ly[i], X0[i], Y0[i], Z0[i]])
+            val2 = np.array([0, 0, f, XR0, YR0, ZR0, OmegaR0, PhiR0, KappaR0,
+                             Rx[i], Ry[i], X0[i], Y0[i], Z0[i]])
+            # For coefficient matrix B
+            b1 = matrix2numpy(B1(*val1)).astype(np.double)
+            b2 = matrix2numpy(B2(*val2)).astype(np.double)
+            B[i*4:i*4+2, :5] = b1[:, :5]
+            B[i*4:i*4+2, 5+j*3:5+(j+1)*3] = b1[:, 5:]
+            B[i*4+2:i*4+4, :5] = b2[:, :5]
+            B[i*4+2:i*4+4, 5+j*3:5+(j+1)*3] = b2[:, 5:]
 
-        # Substitute values for symbols
-        B = np.matrix(np.concatenate((
-            np.matrix(B1(*val1).tolist()),
-            np.matrix(B2(*val2).tolist())))).astype(np.double)
-        F0 = np.matrix(np.concatenate((
-            np.matrix(F01(*val1).tolist()),
-            np.matrix(F02(*val2).tolist())))).astype(np.double)
+            # For constant matrix f
+            f01 = matrix2numpy(F01(*val1)).astype(np.double)
+            f02 = matrix2numpy(F02(*val2)).astype(np.double)
+            F0[i*4:i*4+2, :5] = f01
+            F0[i*4+2:i*4+4, :5] = f02
+            j += 1
 
         # Solve unknown parameters
         N = np.matrix(B.T * B)  # Compute normal matrix
@@ -155,13 +159,14 @@ def main(inputFileName, IOFileName, outputFileName):
         KappaR0 += X[2, 0]
         YR0 += X[3, 0]
         ZR0 += X[4, 0]
-        X0 += np.array(X[5::3, 0])
-        Y0 += np.array(X[6::3, 0])
-        Z0 += np.array(X[7::3, 0])
+        X0 += np.array(X[5::3, 0]).flatten()
+        Y0 += np.array(X[6::3, 0]).flatten()
+        Z0 += np.array(X[7::3, 0]).flatten()
 
         # Output messages for iteration process
         print "Iteration count: %d" % lc, u"|ΔX| = %.6f".encode(LANG) \
             % abs(X.sum())
+        print lc
         lc += 1         # Update Loop counter
 
     # Compute residual vector
