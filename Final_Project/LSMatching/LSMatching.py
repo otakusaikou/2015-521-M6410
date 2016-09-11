@@ -18,17 +18,18 @@ def getVal(img, x, y):
 
 def getInterpolation(img, x, y):
     """Resample from right image, using bilinear interpolation"""
-    # Get coordinates of nearest four points
-    x0 = np.floor(x).astype(int)
-    x1 = x0 + 1
-    y0 = np.floor(y).astype(int)
-    y1 = y0 + 1
+    # Generate array for the interpolated values
+    values = np.zeros(len(x))
 
-    # Ensure the coordinates of four points are in the right image extent
-    x0 = np.clip(x0, 0, img.shape[1] - 1)
-    x1 = np.clip(x1, 0, img.shape[1] - 1)
-    y0 = np.clip(y0, 0, img.shape[0] - 1)
-    y1 = np.clip(y1, 0, img.shape[0] - 1)
+    # Filter out the points outside the image extent
+    mask = (x >= 0) & ((x + 1) <= (img.shape[1] - 1)) & \
+        (y >= 0) & ((y + 1) <= (img.shape[0] - 1))
+    x = x[mask]
+    y = y[mask]
+
+    # Get coordinates of nearest four points
+    x0, y0 = x.astype(int), y.astype(int)
+    x1, y1 = x0 + 1, y0 + 1
 
     # Get intensity of nearest four points
     Ia = img[y0, x0]  # Upper left corner
@@ -42,24 +43,17 @@ def getInterpolation(img, x, y):
     wc = (x-x0) * (y1-y)
     wd = (x-x0) * (y-y0)
 
-    return wa*Ia + wb*Ib + wc*Ic + wd*Id
+    # Update the value array
+    values[mask] = wa*Ia + wb*Ib + wc*Ic + wd*Id
+
+    return values
 
 
-def linearReg(
-        leftImg, rightImg, leftPt, rightPt, windowSize,
-        a0, a1, a2, b0, b1, b2):
+def linearReg(leftImg, rightImg, coords):
     """Compute linear regression"""
-    leftArr = []    # Create two subarrays for left and right image
-    rightArr = []
-    for yl in range((leftPt[0]-windowSize/2), (1+leftPt[0]+windowSize/2)):
-        for xl in range((leftPt[1]-windowSize/2), (1+leftPt[1]+windowSize/2)):
-            xr = a0 + a1 * xl + a2 * yl     # Get corresponding right image
-            yr = b0 + b1 * xl + b2 * yl     # coordinates
-            leftArr.append(getVal(leftImg, xl, yl))
-            rightArr.append(getVal(rightImg, xr, yr))
-
-    leftArr = np.array(leftArr)
-    rightArr = np.array(rightArr)
+    xl, yl, xr, yr = coords
+    leftArr = (getVal(leftImg, xl, yl)).flatten()
+    rightArr = (getVal(rightImg, xr, yr)).flatten()
 
     # Compute elements of covariance matrix
     Sx2 = (leftArr**2).sum() - leftArr.sum()**2 / len(leftArr)
@@ -72,7 +66,7 @@ def linearReg(
     # Y intercept of regression line
     alpha = (rightArr.sum()/len(rightArr)) - (beta*leftArr.sum()/len(leftArr))
 
-    return alpha, beta
+    return alpha, beta, leftArr
 
 
 def lsMatching(leftPt, rightPt, windowSize, leftImg, rightImg):
@@ -80,10 +74,6 @@ def lsMatching(leftPt, rightPt, windowSize, leftImg, rightImg):
     LeftPt, RightPt (list): [row, col]
     windowSize (integer): size of search window
     leftImg, rightImg (numpy.array): source and target image"""
-    # Convert image to gray scale
-    leftGray = cv2.cvtColor(leftImg, cv2.COLOR_BGR2GRAY).astype(np.double)
-    rightGray = cv2.cvtColor(rightImg, cv2.COLOR_BGR2GRAY).astype(np.double)
-
     # Define initial parameters for affine transformation
     a0 = float(rightPt[1] - leftPt[1])
     a1 = 1.0
@@ -92,9 +82,19 @@ def lsMatching(leftPt, rightPt, windowSize, leftImg, rightImg):
     b1 = 0
     b2 = 1.0
 
+    # Get the image points coordinates within the window
+    yi = range((leftPt[0]-windowSize/2), (1+leftPt[0]+windowSize/2))
+    xi = range((leftPt[1]-windowSize/2), (1+leftPt[1]+windowSize/2))
+
+    # For left image
+    xl, yl = map(lambda e: e.flatten(), np.meshgrid(xi, yi))
+
+    # For right image
+    xr = (a0 + a1 * xl + a2 * yl).astype(int)
+    yr = (b0 + b1 * xl + b2 * yl).astype(int)
+
     # Get iteration values for lsq-matching
-    h0, h1 = linearReg(leftGray, rightGray, leftPt, rightPt, windowSize,
-                       a0, a1, a2, b0, b1, b2)
+    h0, h1, valA = linearReg(leftImg, rightImg, (xl, yl, xr, yr))
 
     X = np.ones(1)      # Initial value for iteration
 
@@ -102,36 +102,35 @@ def lsMatching(leftPt, rightPt, windowSize, leftImg, rightImg):
     delta = 1
     X0 = np.zeros(1)    # Variable for old unknown parameters
     lc = 1              # Loop counter
+    fh0 = np.ones(windowSize**2)    # Coefficients of dh0 are constants
     while max(abs(X)) > 0.01 and delta > 0.05 and lc < 40:
-        # Create lists for elements of coefficient matrix
-        fa0, fa1, fa2, fb0, fb1, fb2, fh1, f0 = ([] for i in range(8))
-        fh0 = np.ones(windowSize**2)    # Coefficients of dh0 are constants
-
         # Compute elemens of coefficient matrix and f matrix
-        for yl in range((leftPt[0]-windowSize/2), (1+leftPt[0]+windowSize/2)):
-            for xl in range(
-                    (leftPt[1]-windowSize/2), (1+leftPt[1]+windowSize/2)):
-                xr = a0 + a1 * xl + a2 * yl     # Get corresponding right image
-                yr = b0 + b1 * xl + b2 * yl     # coordinates
+        if lc > 1:
+            # Update the image point coordinates in the right image
+            xr = a0 + a1 * xl + a2 * yl
+            yr = b0 + b1 * xl + b2 * yl
 
-                # Compute slope of B in both x and y directions
-                Bx = (getInterpolation(rightGray, xr + 1, yr)
-                      - getInterpolation(rightGray, xr - 1, yr)) / 2.0
-                By = (getInterpolation(rightGray, xr, yr + 1)
-                      - getInterpolation(rightGray, xr, yr - 1)) / 2.0
+        # Point values in the right window
+        valB = getInterpolation(rightImg, xr, yr)
 
-                fa0.append(h1 * Bx)
-                fa1.append(xl * h1 * Bx)
-                fa2.append(yl * h1 * Bx)
-                fb0.append(h1 * By)
-                fb1.append(xl * h1 * By)
-                fb2.append(yl * h1 * By)
-                fh1.append(getInterpolation(rightGray, xr, yr))
-                f0.append(
-                    h0 + h1 * getInterpolation(rightGray, xr, yr) - getVal(leftGray, xl, yl))
+        Bx = (getInterpolation(rightImg, xr + 1, yr) -
+              getInterpolation(rightImg, xr - 1, yr)) / 2.0
+        By = (getInterpolation(rightImg, xr, yr + 1) -
+              getInterpolation(rightImg, xr, yr - 1)) / 2.0
+
+        fa0 = h1 * Bx
+        fa1 = xl * h1 * Bx
+        fa2 = yl * h1 * Bx
+        fb0 = h1 * By
+        fb1 = xl * h1 * By
+        fb2 = yl * h1 * By
+        fh1 = valB
+        f0 = (h0 + h1 * valB - valA).flatten()
 
         # Compute unknown parameters
-        B = np.matrix(zip(fa0, fa1, fa2, fb0, fb1, fb2, fh0, fh1))
+        B = np.matrix(np.concatenate((
+            fa0, fa1, fa2, fb0, fb1, fb2, fh0, fh1)).reshape(8, -1)).T
+
         F = -np.matrix(f0).T
 
         N = B.T * B     # Compute normal matrix
@@ -155,7 +154,6 @@ def lsMatching(leftPt, rightPt, windowSize, leftImg, rightImg):
         if abs(X).sum() > 200:
             print "Failed!"
             return None
-#        pdb.set_trace()
 
         lc += 1
 
@@ -193,14 +191,17 @@ def main():
     leftImg = cv2.imread("01.jpg")
     rightImg = cv2.imread("02.jpg")
 
-    # pdb.set_trace()
+    # Convert image to gray scale
+    leftGray = cv2.cvtColor(leftImg, cv2.COLOR_BGR2GRAY).astype(np.double)
+    rightGray = cv2.cvtColor(rightImg, cv2.COLOR_BGR2GRAY).astype(np.double)
+
     # Least square matching
     Lx2, Ly2, Rx2, Ry2 = ([] for i in range(4))
 
     fout = open("result.txt", "w")
     for i in range(len(Lx)):
         result = lsMatching(
-            [Ly[i], Lx[i]], [Ry[i], Rx[i]], windowSize, leftImg, rightImg)
+            [Ly[i], Lx[i]], [Ry[i], Rx[i]], windowSize, leftGray, rightGray)
 
         if result:
             Lx2.append(result[0])
