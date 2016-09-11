@@ -166,7 +166,6 @@ def main(inputFileName, IOFileName, outputFileName):
         # Output messages for iteration process
         print "Iteration count: %d" % lc, u"|ΔX| = %.6f".encode(LANG) \
             % abs(X.sum())
-        print lc
         lc += 1         # Update Loop counter
 
     # Compute residual vector
