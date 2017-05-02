@@ -1,13 +1,13 @@
 Digital Photogrammetry Homework Assignments and Final Project
 ==========
 
-##Description
+## Description
 Homework assignments and final project for NTU's [521 M6410](https://goo.gl/Z4o14h) 2015.  
 Written with Python and Matlab Code.
 
-##Requirements
+## Requirements
 
-###Python
+### Python
 This project require [Python v2.7.X](https://www.python.org) and the following modules to be installed.
 
 -[Matplotlib](http://matplotlib.org)  
@@ -17,5 +17,5 @@ This project require [Python v2.7.X](https://www.python.org) and the following m
 -[Sympy](http://www.sympy.org/en/index.html)  
 
 
-###Matlab
+### Matlab
 MATLAB R2010a or higher.
